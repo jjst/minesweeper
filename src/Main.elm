@@ -1,9 +1,12 @@
 module Main exposing (main)
 
+import Array
 import Browser
 import Html exposing (Html, button, div, node, text, tr, td, table)
 import Html.Events exposing (onClick)
 import Html.Attributes as HA
+import Grid
+import Grid exposing (Grid, Coords)
 import Random
 
 
@@ -22,10 +25,7 @@ type alias Model =
     { board : GameBoard, moves : Int }
 
 
-type alias Coords =
-    ( Int, Int )
-
-type alias GameBoard = List (List Cell)
+type alias GameBoard = Grid Cell
 
 type alias Cell = 
   { hasMine : Bool
@@ -48,16 +48,16 @@ boardSize = 15
 emptyBoard : GameBoard
 emptyBoard =
     { hasMine = False, state = Unexplored }
-        |> List.repeat boardSize
-        |> List.repeat boardSize
+        |> List.repeat boardSize |> Array.fromList
+        |> List.repeat boardSize |> Array.fromList
 
 
 randomBoard : Random.Generator GameBoard
 randomBoard =
     randomBool 
         |> Random.map (\bool -> { hasMine = bool, state = Unexplored })
-        |> Random.list boardSize
-        |> Random.list boardSize
+        |> Random.list boardSize |> Random.map Array.fromList
+        |> Random.list boardSize |> Random.map Array.fromList
 
 
 randomBool : Random.Generator Bool
@@ -65,20 +65,12 @@ randomBool =
   Random.weighted (10, True) [ (90, False) ]
 
 
-neighbors : Coords -> List Coords
-neighbors ( i, j ) =
-    [ ( i, j ), ( i - 1, j ), ( i + 1, j ), ( i, j - 1 ), ( i, j + 1 ) ]
+-- minesInNeighborhood : GameBoard -> Coords -> Int
 
 
 isWon : GameBoard -> Bool
 isWon board =
     False
-
-
-indexedMap : (Coords -> a -> b) -> List (List a) -> List (List b)
-indexedMap f board =
-    board
-        |> List.indexedMap (\i row -> row |> List.indexedMap (\j cellModel -> f ( i, j ) cellModel))
 
 
 
@@ -97,7 +89,7 @@ update message ({ board, moves } as model) =
                 NewBoard gameBoard ->
                     { model | board = gameBoard }
                 ClickedCell coords ->
-                    { model | board = indexedMap (\c cell -> if coords == c then { cell | state = Explored } else cell) board }
+                    { model | board = Grid.indexedMap (\c cell -> if coords == c then { cell | state = Explored } else cell) board }
 
     in
         ( newModel, Cmd.none )
@@ -119,10 +111,11 @@ view : Model -> Html Msg
 view model =
     let
 
-        rows =
-            List.indexedMap
-                (\i row -> div [HA.class "row" ] (row |> List.indexedMap (\j cell -> viewCell cell (i, j))))
-                model.board
+        rows = model.board
+            |> Array.indexedMap
+                (\i row -> div [HA.class "row" ] 
+                    (row |> Array.indexedMap (\j cell -> viewCell cell (i, j)) |> Array.toList))
+            |> Array.toList
         grid = div [ HA.class "grid" ] rows
     in
         div [] [ css "style.css", grid ]
