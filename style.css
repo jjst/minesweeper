@@ -7,9 +7,20 @@ div {
   padding: 0;
 }
 
+.grid {
+  background-color: #c0c0c0;
+}
+
 .row {
   margin-bottom: -1px;
 }
+
+.mine {
+  background-image: url(../img/sprite.gif);
+  background-repeat: no-repeat;
+  background-position: -32px -53px;
+}
+
 
 .cell {
   height: 12px;

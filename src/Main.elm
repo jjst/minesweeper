@@ -4,6 +4,7 @@ import Browser
 import Html exposing (Html, button, div, node, text, tr, td, table)
 import Html.Events exposing (onClick)
 import Html.Attributes as HA
+import Random
 
 
 
@@ -11,7 +12,7 @@ import Html.Attributes as HA
 
 
 main =
-  Browser.sandbox { init = init, update = update, view = view }
+  Browser.element { init = init, update = update, subscriptions = subscriptions, view = view }
 
 
 
@@ -33,21 +34,35 @@ type alias Cell =
 
 type CellState = Unexplored | Flagged | Explored
 
-init : Model
-init =
+init : () -> ( Model, Cmd Msg )
+init flags =
     let
         model =
             { board = emptyBoard, moves = 0 }
     in
-        model
+        ( model, Random.generate NewBoard randomBoard)
 
+boardSize : Int
+boardSize = 15
 
+emptyBoard : GameBoard
 emptyBoard =
     { hasMine = False, state = Unexplored }
-        |> List.repeat 15
-        |> List.repeat 15
+        |> List.repeat boardSize
+        |> List.repeat boardSize
 
 
+randomBoard : Random.Generator GameBoard
+randomBoard =
+    randomBool 
+        |> Random.map (\bool -> { hasMine = bool, state = Unexplored })
+        |> Random.list boardSize
+        |> Random.list boardSize
+
+
+randomBool : Random.Generator Bool
+randomBool =
+  Random.weighted (10, True) [ (90, False) ]
 
 
 neighbors : Coords -> List Coords
@@ -70,19 +85,31 @@ indexedMap f board =
 
 -- UPDATE
 
-type Msg = ClickedCell Coords
+type Msg 
+  = ClickedCell Coords
+  | NewBoard GameBoard
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update message ({ board, moves } as model) =
     let
         newModel =
             case message of
+                NewBoard gameBoard ->
+                    { model | board = gameBoard }
                 ClickedCell coords ->
                     { model | board = indexedMap (\c cell -> if coords == c then { cell | state = Explored } else cell) board }
 
     in
-        newModel
+        ( newModel, Cmd.none )
 
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  Sub.none
 
 
 -- VIEW
@@ -106,7 +133,7 @@ viewCell : Cell -> Coords -> Html Msg
 viewCell { hasMine, state } coords =
   case (hasMine, state) of
     (_, Unexplored) -> div [ HA.class "cell", onClick (ClickedCell coords) ] [ ]
-    (True, Explored) -> div [ HA.class "cell triggered", onClick (ClickedCell coords) ] [ ]
+    (True, Explored) -> div [ HA.class "cell mine triggered", onClick (ClickedCell coords) ] [ ]
     (False, Explored) -> div [ HA.class "cell triggered", onClick (ClickedCell coords) ] [ ]
     (_, Flagged) -> div [ HA.class "cell", onClick (ClickedCell coords) ] [ ]
 
