@@ -1,8 +1,9 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, div, text, tr, td, table)
+import Html exposing (Html, button, div, node, text, tr, td, table)
 import Html.Events exposing (onClick)
+import Html.Attributes as HA
 
 
 
@@ -93,23 +94,22 @@ view model =
 
         rows =
             List.indexedMap
-                (\i row -> tr [] (row |> List.indexedMap (\j cellModel -> td [] [ (renderCellAt ( i, j ) cellModel) ])))
+                (\i row -> div [HA.class "row" ] (row |> List.indexedMap (\j cell -> viewCell cell (i, j))))
                 model.board
-
-        lightsTable =
-            table [] rows
+        grid = div [ HA.class "grid" ] rows
     in
-        table [] rows
+        div [] [ css "style.css", grid ]
 
 
-renderCellAt : Coords -> Cell -> Html Msg
-renderCellAt ( i, j ) cellModel =
-  button [ onClick (ClickedCell ( i, j )) ] [ text (renderText cellModel) ]
 
-renderText : Cell -> String
-renderText { hasMine, state } =
+viewCell : Cell -> Coords -> Html Msg
+viewCell { hasMine, state } coords =
   case (hasMine, state) of
-    (_, Unexplored) -> "_"
-    (True, Explored) -> "x"
-    (False, Explored) -> "o"
-    (_, Flagged) -> "|>"
+    (_, Unexplored) -> div [ HA.class "cell", onClick (ClickedCell coords) ] [ ]
+    (True, Explored) -> div [ HA.class "cell triggered", onClick (ClickedCell coords) ] [ ]
+    (False, Explored) -> div [ HA.class "cell triggered", onClick (ClickedCell coords) ] [ ]
+    (_, Flagged) -> div [ HA.class "cell", onClick (ClickedCell coords) ] [ ]
+
+css : String -> Html a
+css path =
+    node "link" [ HA.rel "stylesheet", HA.href path ] []
